@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>DSH 侧边栏</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --fg: #1f2430;
+      --muted: #6b7280;
+      --line: #e2e5ec;
+      --card: #ffffff;
+      --accent: #4f46e5;
+      --accent-weak: #eef0ff;
+      --danger: #b91c1c;
+      --warn-bg: #fef3c7;
+      --warn-fg: #92400e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181d;
+        --fg: #e7e9ee;
+        --muted: #9aa1ad;
+        --line: #2c313b;
+        --card: #1e2127;
+        --accent: #818cf8;
+        --accent-weak: #262a3d;
+        --danger: #f87171;
+        --warn-bg: #3a2f12;
+        --warn-fg: #fbbf24;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--fg);
+      font: 13px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+    }
+
+    header {
+      position: relative;
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      font-size: 12px;
+      min-width: 0;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #9ca3af;
+      transition: background .2s, box-shadow .2s;
+      flex: none;
+    }
+    .dot.on {
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, .18);
+    }
+    .addr {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    #status-text {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+    .spacer { flex: 1; }
+    .actions { display: flex; align-items: center; gap: 4px; }
+
+    button {
+      font: inherit;
+      color: var(--fg);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { filter: brightness(1.08); color: #fff; }
+    button.active {
+      background: var(--accent-weak);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    button:disabled { opacity: .55; cursor: default; }
+    .actions button { padding: 2px 8px; font-size: 12px; }
+
+    /* ⚙ 下拉设置菜单 */
+    #menu {
+      position: absolute;
+      top: calc(100% + 3px);
+      right: 6px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      min-width: 190px;
+      padding: 4px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+    }
+    #menu[hidden] { display: none; }
+    #menu button {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      background: none;
+      border: 0;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 12px;
+      text-align: left;
+    }
+    #menu button:hover { background: var(--accent-weak); }
+    #menu .menu-note {
+      color: var(--muted);
+      font-size: 11px;
+      padding: 2px 10px 6px;
+      line-height: 1.5;
+    }
+
+    /* 连接中断横幅 */
+    #conn-banner {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #fee2e2;
+      color: #991b1b;
+      border-bottom: 1px solid rgba(239, 68, 68, .4);
+      font-size: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      #conn-banner { background: #3f1d1d; color: #fca5a5; }
+    }
+    #conn-banner[hidden] { display: none; }
+    #conn-banner span { flex: 1; min-width: 0; }
+    #btn-conn-reload { padding: 2px 8px; font-size: 12px; border-radius: 6px; flex: none; }
+
+    /* 一键配置本地代理 */
+    #setup-card {
+      flex: none;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    #setup-card[hidden] { display: none; }
+    #setup-card .sc-title { font-weight: 700; }
+    #setup-card b { color: inherit; }
+    #setup-card .sc-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    #setup-card button { background: var(--card); color: var(--fg); border-color: var(--line); }
+    #setup-card .sc-note { color: var(--muted); font-size: 11px; }
+
+    .quote-label {
+      flex: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .quote-actions { display: flex; gap: 6px; flex: none; }
+    .quote-actions button {
+      padding: 2px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    #url-row {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+    #url-row[hidden] { display: none; }
+    #url-input {
+      flex: 1;
+      min-width: 0;
+      font: inherit;
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    #url-input:focus { outline: none; border-color: var(--accent); }
+
+    #frame-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+    #dsh-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: var(--card);
+    }
+    #error-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 16px;
+    }
+    #error-overlay[hidden] { display: none; }
+    .err-box {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      text-align: center;
+      max-width: 280px;
+    }
+    .err-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--danger);
+    }
+    .err-desc { color: var(--muted); }
+    .err-desc b { color: var(--fg); }
+    #btn-retry { padding: 6px 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <span class="dot" id="dsh-dot"></span>
+      <span>DSH</span>
+      <span class="addr">127.0.0.1:3080</span>
+      <span id="status-text">未连接</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <button id="btn-reload" title="重新加载 dsh 页面">⟳</button>
+      <button id="btn-config" title="设置">⚙</button>
+    </div>
+    <div id="menu" hidden>
+      <button id="menu-url">修改地址</button>
+      <button id="menu-proxy">启动代理</button>
+      <button id="menu-float">关闭引用浮动面板</button>
+      <span class="menu-note" id="menu-note" hidden></span>
+    </div>
+  </header>
+
+  <div id="setup-card" hidden>
+    <span class="sc-title">需要启动本地代理（WebSocket）</span>
+    <b>配置方法：首次配置需要点击下面的按钮下载一个小脚本，下载后手动双击运行一次。后续在顶栏 ⚙ 菜单里启动/关闭代理，代理文件缺失时重新下载运行一次即可。</b>
+    <span>原因：dsh 的安全栅栏会拦截侧边栏里的 WebSocket 登录。</span>
+    <span>原理：它在本机用户目录（%LOCALAPPDATA%\DSHSidebarProxy）写入并启动一个隐藏的迷你代理，
+      并注册一个<b>仅当前用户级</b>的本机启动器（无管理员、无开机自启）。</span>
+    <div class="sc-actions">
+      <button id="btn-download-setup" class="primary">下载本地代理脚本</button>
+      <button id="btn-setup-check">我已运行，检查</button>
+    </div>
+    <span id="setup-status">状态：未检查</span>
+    <span class="sc-note">脚本内容可在下载后用记事本查看，全部操作仅限本机当前用户。</span>
+  </div>
+
+  <div id="conn-banner" hidden>
+    <span>dsh 连接中断（正在自动重试）</span>
+    <button id="btn-conn-reload" class="primary">重载侧边栏</button>
+  </div>
+
+  <div id="url-row" hidden>
+    <span class="quote-label">地址</span>
+    <input id="url-input" type="text" spellcheck="false" placeholder="http://127.0.0.1:3080/?token=…" />
+    <div class="quote-actions">
+      <button id="btn-url-save" class="primary">保存</button>
+      <button id="btn-url-cancel">取消</button>
+    </div>
+  </div>
+
+  <div id="frame-wrap">
+    <iframe id="dsh-frame" src="http://127.0.0.1:3080" allow="clipboard-read; clipboard-write"></iframe>
+    <div id="error-overlay" hidden>
+      <div class="err-box">
+        <div class="err-title">无法连接 dsh</div>
+        <div class="err-desc">请确认 dsh 已在 <b>http://127.0.0.1:3080</b> 正常运行（dsh 重启会签发新 token，可用 ⚙ 更新地址），然后点击重试。</div>
+        <button id="btn-retry" class="primary">重试</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
